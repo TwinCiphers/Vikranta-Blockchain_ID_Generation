@@ -238,5 +238,8 @@ For issues and questions:
 - [MetaMask Documentation](https://docs.metamask.io/)
 
 ---
+## For Website view check out these pics
+
+[Website View](https://drive.google.com/file/d/1IiTSi1eTMEOrbd4EX3J0dS8G9EHof_U8/view?usp=drivesdk)
 
 **Built with ❤️ for secure and transparent tourist registration**
