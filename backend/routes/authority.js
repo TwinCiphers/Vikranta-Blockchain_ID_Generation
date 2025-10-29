@@ -1,0 +1,314 @@
+const express = require('express');
+const router = express.Router();
+const { touristRegistryContract, web3 } = require('../config/blockchain');
+const { generateQRCode } = require('../utils/qrGenerator');
+const { generatePVCCard } = require('../utils/pvcCardGenerator');
+const expirationChecker = require('../services/expirationChecker');
+
+// Simple in-memory storage for registered tourists (in production, use a database)
+let registeredTourists = [];
+
+// Helper function to track registered tourists
+router.trackTourist = (touristData) => {
+    const existing = registeredTourists.find(t => t.uniqueId === touristData.uniqueId);
+    if (!existing) {
+        registeredTourists.push(touristData);
+    }
+};
+
+// POST /api/authority/check-authority - Check if address is an authority
+router.post('/check-authority', async (req, res) => {
+    try {
+        const { address } = req.body;
+        
+        if (!address) {
+            return res.status(400).json({
+                success: false,
+                message: 'Address is required'
+            });
+        }
+        
+        console.log('Checking authority status for:', address);
+        
+        // Check on blockchain if address is an authority
+        const isAuthority = await touristRegistryContract.methods
+            .authorities(address)
+            .call();
+        
+        console.log('Is authority:', isAuthority);
+        
+        // If not an authority, try to add them (for demo purposes)
+        // In production, only admin should be able to add authorities
+        if (!isAuthority) {
+            try {
+                const accounts = await web3.eth.getAccounts();
+                console.log('Attempting to add as authority using admin account:', accounts[0]);
+                
+                await touristRegistryContract.methods
+                    .addAuthority(address)
+                    .send({ from: accounts[0], gas: 3000000 });
+                
+                console.log('Successfully added as authority');
+                
+                res.json({
+                    success: true,
+                    isAuthority: true,
+                    message: 'Authority access granted'
+                });
+            } catch (addError) {
+                console.error('Failed to add authority:', addError);
+                res.json({
+                    success: false,
+                    isAuthority: false,
+                    message: 'Not authorized and could not be added as authority'
+                });
+            }
+        } else {
+            res.json({
+                success: true,
+                isAuthority: true,
+                message: 'Authority verified'
+            });
+        }
+        
+    } catch (error) {
+        console.error('Check authority error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// GET /api/authority/pending - Get pending verifications
+router.get('/pending', async (req, res) => {
+    try {
+        console.log('Fetching pending verifications...');
+        
+        // Get total tourists from contract
+        const totalTourists = await touristRegistryContract.methods.totalTourists().call();
+        console.log('Total tourists registered:', totalTourists);
+        
+        const pending = [];
+        
+        // If we have tracked tourists, check them first
+        for (const tourist of registeredTourists) {
+            try {
+                const info = await touristRegistryContract.methods
+                    .getTouristInfo(tourist.uniqueId)
+                    .call();
+                
+                if (!info[4]) { // isVerified is false
+                    const docs = await touristRegistryContract.methods
+                        .getTouristDocuments(tourist.uniqueId)
+                        .call();
+                    
+                    pending.push({
+                        uniqueId: tourist.uniqueId,
+                        name: info[0],              // name
+                        nationality: info[1],        // nationality
+                        registrationDate: Number(info[5]), // registrationDate
+                        documentCount: docs.length
+                    });
+                }
+            } catch (err) {
+                console.error('Error fetching tourist:', err);
+            }
+        }
+        
+        console.log('Pending verifications found:', pending.length);
+
+        res.json({
+            success: true,
+            tourists: pending,
+            total: Number(totalTourists)
+        });
+    } catch (error) {
+        console.error('Fetch pending error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// POST /api/authority/verify - Verify tourist
+router.post('/verify', async (req, res) => {
+    try {
+        const { uniqueId, approved, validityDays = 365 } = req.body;
+        
+        console.log('Verifying tourist:', uniqueId, 'Approved:', approved, 'Validity:', validityDays, 'days');
+
+        if (!approved) {
+            // For rejection, just update local status (you can add rejection logic to contract if needed)
+            return res.json({
+                success: true,
+                message: 'Tourist registration rejected'
+            });
+        }
+
+        // Validate validity days
+        if (validityDays < 1 || validityDays > 3650) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validity must be between 1 and 3650 days'
+            });
+        }
+
+        // Fetch tourist info before verification to include in QR code
+        const touristInfo = await touristRegistryContract.methods
+            .getTouristInfo(uniqueId)
+            .call();
+
+        // Instead of storing the full QR code data URL, store a simple hash/reference
+        // Since the QR code contains the uniqueId, we can regenerate it anytime
+        const qrReference = `QR_${uniqueId.substring(0, 8)}`;
+        
+        console.log('Using QR reference:', qrReference);
+
+        // Verify on blockchain with QR code reference and validity period
+        const accounts = await web3.eth.getAccounts();
+        const tx = await touristRegistryContract.methods
+            .verifyTourist(uniqueId, qrReference, validityDays)
+            .send({ from: accounts[0], gas: 3000000 });
+
+        console.log('Tourist verified on blockchain:', tx.transactionHash);
+        
+        // Calculate expiration date timestamp
+        const expirationTimestamp = Math.floor(Date.now() / 1000) + (validityDays * 24 * 60 * 60);
+        
+        // Prepare tourist data for QR code generation with complete information
+        const touristDataForQR = {
+            name: touristInfo[0],           // name
+            nationality: touristInfo[1],     // nationality
+            qrCodeHash: qrReference,         // use the new qrReference
+            verificationDate: Math.floor(Date.now() / 1000),
+            expirationDate: expirationTimestamp,
+            isVerified: true
+        };
+        
+        // Generate QR code with complete tourist data
+        const qrCodeDataURL = await generateQRCode(uniqueId, touristDataForQR);
+        console.log('QR Code generated with tourist data');
+        
+        // Track this tourist for automatic expiration checking
+        expirationChecker.trackTourist(uniqueId);
+        console.log('Tourist added to expiration tracker:', uniqueId);
+        
+        // Calculate expiration date
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + validityDays);
+
+        res.json({
+            success: true,
+            transactionHash: tx.transactionHash,
+            qrCode: qrCodeDataURL,
+            validityDays: validityDays,
+            expirationDate: expirationDate.toISOString(),
+            message: `Tourist approved and verified successfully. Valid for ${validityDays} days until ${expirationDate.toLocaleDateString()}`
+        });
+    } catch (error) {
+        console.error('Verification error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// POST /api/authority/generate-pvc-card - Generate PVC card
+router.post('/generate-pvc-card', async (req, res) => {
+    try {
+        const { uniqueId } = req.body;
+        
+        console.log('Generating PVC card for:', uniqueId);
+
+        // Fetch tourist data from blockchain
+        const touristInfo = await touristRegistryContract.methods
+            .getTouristInfo(uniqueId)
+            .call();
+        
+        // Extract tourist data
+        const touristData = {
+            uniqueId: uniqueId,
+            name: touristInfo[0],              // name
+            nationality: touristInfo[1],        // nationality
+            qrCodeHash: touristInfo[3],         // qrCodeHash
+            verificationDate: Number(touristInfo[6]), // verificationDate
+            expirationDate: Number(touristInfo[7]),   // expirationDate
+            isVerified: touristInfo[4]          // isVerified
+        };
+        
+        console.log('Tourist data for PVC card:', touristData);
+
+        // Generate PVC card with complete data
+        const pvcCardBuffer = await generatePVCCard(touristData);
+
+        // Send as downloadable file
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="tourist-card-${uniqueId}.pdf"`
+        });
+        res.send(pvcCardBuffer);
+    } catch (error) {
+        console.error('PVC card generation error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/authority/all-tourists - Get all registered tourists
+router.get('/all-tourists', async (req, res) => {
+    try {
+        const tourists = await touristRegistryContract.methods
+            .getAllTourists()
+            .call();
+
+        res.json({
+            success: true,
+            data: tourists
+        });
+    } catch (error) {
+        console.error('Fetch all tourists error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/authority/check/:uniqueId - Check a specific tourist by ID
+router.get('/check/:uniqueId', async (req, res) => {
+    try {
+        const { uniqueId } = req.params;
+        
+        console.log('Checking tourist:', uniqueId);
+        
+        const info = await touristRegistryContract.methods
+            .getTouristInfo(uniqueId)
+            .call();
+        
+        const docs = await touristRegistryContract.methods
+            .getTouristDocuments(uniqueId)
+            .call();
+        
+        // Add to tracking if not verified
+        if (!info[4]) {
+            const existing = registeredTourists.find(t => t.uniqueId === uniqueId);
+            if (!existing) {
+                registeredTourists.push({
+                    uniqueId,
+                    name: info[0],
+                    nationality: info[1]
+                });
+            }
+        }
+        
+        res.json({
+            success: true,
+            tourist: {
+                uniqueId,
+                name: info[0],
+                nationality: info[1],
+                isVerified: info[4],
+                registrationDate: Number(info[5]),
+                documentCount: docs.length
+            }
+        });
+    } catch (error) {
+        console.error('Check tourist error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+module.exports = router;

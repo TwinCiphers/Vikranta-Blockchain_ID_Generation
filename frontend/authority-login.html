@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authority Login</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .login-container {
+            max-width: 500px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-header h1 {
+            color: #1e3a8a;
+            margin-bottom: 10px;
+        }
+        .login-header p {
+            color: #666;
+        }
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        .alert-error {
+            background: #fee;
+            color: #c00;
+            border: 1px solid #fcc;
+        }
+        .alert-success {
+            background: #efe;
+            color: #0a0;
+            border: 1px solid #cfc;
+        }
+        .wallet-status {
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .security-note {
+            background: #fff9e6;
+            border-left: 4px solid #ffcc00;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 3px;
+        }
+        .security-note h4 {
+            margin: 0 0 10px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🔐 Authority Access</h1>
+        </div>
+    </nav>
+
+    <div class="login-container">
+        <div class="login-header">
+            <h1>👮 Authority Panel Login</h1>
+            <p>Secure Access for Authorized Personnel Only</p>
+        </div>
+
+        <div id="alertBox" class="alert"></div>
+        
+        <div id="walletStatus" class="wallet-status">
+            <p><strong>Connected Wallet:</strong></p>
+            <p id="connectedAddress" style="word-break: break-all; font-family: monospace;"></p>
+        </div>
+
+        <div id="loginForm">
+            <button id="connectWalletBtn" class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 16px;">
+                🔗 Connect MetaMask Wallet
+            </button>
+
+            <div id="verificationSection" style="display: none; margin-top: 20px;">
+                <div class="form-group">
+                    <label>Authority Passcode</label>
+                    <input type="password" id="passcode" class="form-control" placeholder="Enter authority passcode">
+                    <small style="color: #666;">Enter the passcode provided by the administrator</small>
+                </div>
+
+                <button id="verifyBtn" class="btn btn-success" style="width: 100%; padding: 15px; font-size: 16px;">
+                    ✅ Verify & Login
+                </button>
+            </div>
+        </div>
+
+        <div class="security-note">
+            <h4>🔒 Security Notice</h4>
+            <ul style="margin: 10px 0 0 20px; color: #666;">
+                <li>Only authorized personnel can access the authority panel</li>
+                <li>Your wallet address must be registered as an authority</li>
+                <li>All actions are logged on the blockchain</li>
+                <li>Unauthorized access attempts are monitored</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="index.html" style="color: #1e3a8a;">← Back to Home</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@4.0.0/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let account;
+
+        // Authority passcode (in production, this should be handled server-side)
+        const AUTHORITY_PASSCODE = 'ADMIN2025';
+
+        // Wait for Web3 to load
+        window.addEventListener('load', () => {
+            console.log('Window loaded');
+            console.log('Web3 available:', typeof window.Web3);
+            
+            document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
+            document.getElementById('verifyBtn').addEventListener('click', verifyAndLogin);
+        });
+
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showAlert('MetaMask is not installed. Please install MetaMask to continue.', 'error');
+                    return;
+                }
+
+                showAlert('Connecting to MetaMask...', 'success');
+
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+
+                // Initialize Web3 - try different methods for compatibility
+                try {
+                    if (typeof window.Web3 !== 'undefined') {
+                        if (window.Web3.Web3) {
+                            web3 = new window.Web3.Web3(window.ethereum);
+                        } else {
+                            web3 = new window.Web3(window.ethereum);
+                        }
+                    } else {
+                        // Fallback: use ethereum directly without Web3 wrapper for now
+                        console.log('Web3 not loaded, using ethereum provider directly');
+                        web3 = window.ethereum;
+                    }
+                } catch (web3Error) {
+                    console.error('Web3 initialization error:', web3Error);
+                    // Continue anyway, we don't strictly need web3 for this login
+                }
+                
+                account = accounts[0];
+
+                console.log('Connected wallet:', account);
+
+                document.getElementById('connectedAddress').textContent = account;
+                document.getElementById('walletStatus').style.display = 'block';
+                document.getElementById('verificationSection').style.display = 'block';
+                document.getElementById('connectWalletBtn').textContent = '✅ Wallet Connected';
+                document.getElementById('connectWalletBtn').disabled = true;
+
+                showAlert('Wallet connected successfully! Please enter the authority passcode.', 'success');
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                showAlert('Failed to connect wallet: ' + error.message, 'error');
+            }
+        }
+
+        async function verifyAndLogin() {
+            if (!account) {
+                showAlert('Please connect your wallet first', 'error');
+                return;
+            }
+
+            const passcode = document.getElementById('passcode').value.trim();
+
+            if (!passcode) {
+                showAlert('Please enter the authority passcode', 'error');
+                return;
+            }
+
+            const verifyBtn = document.getElementById('verifyBtn');
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Verifying...';
+
+            try {
+                // Verify passcode
+                if (passcode !== AUTHORITY_PASSCODE) {
+                    showAlert('Invalid passcode. Access denied.', 'error');
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = '✅ Verify & Login';
+                    return;
+                }
+
+                showAlert('Verifying authority status on blockchain...', 'success');
+
+                // Check if wallet is registered as authority on blockchain
+                const response = await fetch('/api/authority/check-authority', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        address: account
+                    })
+                });
+
+                const result = await response.json();
+                console.log('Authority check result:', result);
+
+                if (result.success && result.isAuthority) {
+                    // Store authentication in session
+                    sessionStorage.setItem('authorityWallet', account);
+                    sessionStorage.setItem('authorityAuth', 'true');
+                    sessionStorage.setItem('authTime', Date.now());
+
+                    showAlert('✅ Authentication successful! Redirecting...', 'success');
+
+                    setTimeout(() => {
+                        window.location.href = 'authority-panel.html';
+                    }, 1500);
+
+                } else {
+                    showAlert('❌ Access Denied: Your wallet is not registered as an authority. Please contact the administrator.', 'error');
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = '✅ Verify & Login';
+                }
+
+            } catch (error) {
+                console.error('Verification error:', error);
+                showAlert('Verification failed: ' + error.message, 'error');
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = '✅ Verify & Login';
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = 'alert alert-' + type;
+            alertBox.style.display = 'block';
+        }
+
+        // Auto-connect if wallet was previously connected
+        window.ethereum?.on('accountsChanged', (accounts) => {
+            if (accounts.length === 0) {
+                console.log('Wallet disconnected');
+            } else {
+                account = accounts[0];
+                document.getElementById('connectedAddress').textContent = account;
+            }
+        });
+    </script>
+</body>
+</html>

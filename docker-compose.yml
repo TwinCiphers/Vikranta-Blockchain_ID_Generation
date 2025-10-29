@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Truffle Blockchain (Ganache)
+  blockchain:
+    image: trufflesuite/ganache:latest
+    container_name: tourist-blockchain
+    ports:
+      - "9545:8545"
+    environment:
+      - MNEMONIC=diesel someone meadow ice fee oppose copper mountain distance law insane duty
+    command: 
+      - --database.dbPath=/app/db
+      - --chain.networkId=5777
+      - --chain.chainId=5777
+      - --miner.blockGasLimit=6721975
+      - --miner.defaultGasPrice=20000000000
+      - --wallet.mnemonic="diesel someone meadow ice fee oppose copper mountain distance law insane duty"
+      - --wallet.totalAccounts=10
+      - --wallet.defaultBalance=100
+      - --server.host=0.0.0.0
+      - --server.port=8545
+    volumes:
+      - blockchain-data:/app/db
+    networks:
+      - blockchain-network
+    restart: unless-stopped
+
+  # Backend API Server
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: tourist-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - BLOCKCHAIN_PROVIDER=http://blockchain:8545
+      - CONTRACT_ADDRESS=0x8a483dA03C78a48382261D67385A80e7c5aC7CA5
+      - ENCRYPTION_KEY=4482d1e262fb2c871da06ca46da38545d75016d0b91b362b449f5e59c538b145
+      - PORT=3000
+      - BASE_URL=http://localhost:3000
+      - APP_URL=http://localhost:3000
+    volumes:
+      - ./backend:/app/backend
+      - ./build:/app/build
+      - ./frontend:/app/frontend
+      - ./node_modules:/app/node_modules
+    depends_on:
+      - blockchain
+    networks:
+      - blockchain-network
+    command: sh -c "sleep 10 && node backend/server.js"
+    restart: unless-stopped
+
+  # Contract Deployment Service (runs once)
+  deployer:
+    build:
+      context: .
+      dockerfile: Dockerfile.deployer
+    container_name: tourist-deployer
+    environment:
+      - BLOCKCHAIN_PROVIDER=http://blockchain:8545
+    volumes:
+      - ./contracts:/app/contracts
+      - ./migrations:/app/migrations
+      - ./build:/app/build
+      - ./truffle-config.js:/app/truffle-config.js
+      - ./.env:/app/.env
+    depends_on:
+      - blockchain
+    networks:
+      - blockchain-network
+
+networks:
+  blockchain-network:
+    driver: bridge
+
+volumes:
+  blockchain-data:

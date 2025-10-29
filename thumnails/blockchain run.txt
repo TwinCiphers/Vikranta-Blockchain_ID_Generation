@@ -1,0 +1,8 @@
+$ npx truffle develop
+
+$ chmod +x deploy.sh
+./deploy.sh
+
+$ node backend/server.js
+
+open all in separate terminals not close it

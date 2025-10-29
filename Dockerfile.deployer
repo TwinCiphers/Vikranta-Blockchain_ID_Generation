@@ -1,0 +1,21 @@
+# Deployer Dockerfile - One-time contract deployment
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install netcat for health checks
+RUN apk add --no-cache netcat-openbsd
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies for Truffle)
+RUN npm install
+
+# Copy contract files
+COPY contracts ./contracts
+COPY migrations ./migrations
+COPY truffle-config.js ./truffle-config.js
+
+# The deployment command will be run by docker-compose
+CMD ["sh", "-c", "echo 'Deployer container ready'"]

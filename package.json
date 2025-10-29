@@ -1,0 +1,32 @@
+{
+  "name": "tourist-registration-blockchain",
+  "version": "1.0.0",
+  "description": "Blockchain-based Tourist Registration System",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "test": "truffle test",
+    "compile": "truffle compile",
+    "migrate": "truffle migrate"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "web3": "^4.0.0",
+    "ipfs-http-client": "^60.0.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.0",
+    "qrcode": "^1.5.3",
+    "multer": "^1.4.5-lts.1",
+    "crypto-js": "^4.1.1",
+    "uuid": "^9.0.0",
+    "pdfkit": "^0.13.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22",
+    "truffle": "^5.11.0",
+    "@truffle/hdwallet-provider": "^2.1.0"
+  }
+}
