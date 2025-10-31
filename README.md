@@ -1195,7 +1195,7 @@ SOFTWARE.
 ---
 ## For Website view check out these pics
 
-[Website View](https://drive.google.com/file/d/1IiTSi1eTMEOrbd4EX3J0dS8G9EHof_U8/view?usp=drivesdk)
+[Website View](https://drive.google.com/file/d/1BcWSrrraMPo4UMfKNPaGM714iORXSy8D/view?usp=drivesdk)
 
 ## 📞 Support
 
@@ -1210,9 +1210,9 @@ SOFTWARE.
 - **Discussions**: [Ask questions](https://github.com/TwinCiphers/Vikranta-Blockchain_ID_Generation/discussions)
 
 ### Contact
-- **Email**: support@example.com
+- **Email**: [support@vikranta.com](tech.pheonix03@gmail.com)
 - **Discord**: [Join our server](#)
-- **Twitter**: [@YourProject](#)
+- **Twitter**: [@Vikranta](#)
 
 ---
 
