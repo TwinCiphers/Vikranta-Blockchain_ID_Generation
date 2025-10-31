@@ -36,6 +36,7 @@ contract TouristRegistry {
     event TouristRegistered(string uniqueId, address indexed touristAddress, uint256 timestamp);
     event DocumentUploaded(string uniqueId, string documentType, string ipfsHash);
     event TouristVerified(string uniqueId, address indexed authority, uint256 verificationDate, uint256 expirationDate);
+    event TouristRejected(string uniqueId, address indexed authority, uint256 timestamp);
     event QRCodeGenerated(string uniqueId, string qrCodeHash);
     event TouristExpired(string uniqueId, uint256 timestamp);
     
@@ -138,6 +139,19 @@ contract TouristRegistry {
         
         emit TouristVerified(_uniqueId, msg.sender, block.timestamp, expirationDate);
         emit QRCodeGenerated(_uniqueId, _qrCodeHash);
+    }
+    
+    function rejectTourist(string memory _uniqueId) 
+        public 
+        onlyAuthority 
+    {
+        require(bytes(tourists[_uniqueId].uniqueId).length > 0, "Tourist not registered");
+        require(!tourists[_uniqueId].isVerified, "Cannot reject verified tourist");
+        
+        // Deactivate the tourist
+        tourists[_uniqueId].isActive = false;
+        
+        emit TouristRejected(_uniqueId, msg.sender, block.timestamp);
     }
     
     function checkExpiration(string memory _uniqueId) public returns (bool) {

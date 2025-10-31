@@ -1,3 +1,61 @@
+/* ============================================
+   VIKRANTA - Government Tourism Registry
+   Professional Government Website Design
+   Modern & Futuristic UI/UX
+   ============================================ */
+
+:root {
+    /* Government Color Scheme - Professional Blue & Gold */
+    --primary-blue: #003d82;
+    --primary-navy: #001f54;
+    --accent-gold: #d4af37;
+    --accent-orange: #ff6b35;
+    --light-blue: #0066cc;
+    --dark-blue: #001433;
+    
+    /* Neutral Colors */
+    --white: #ffffff;
+    --light-gray: #f8f9fa;
+    --medium-gray: #e9ecef;
+    --dark-gray: #495057;
+    --text-dark: #212529;
+    
+    /* Status Colors */
+    --success: #28a745;
+    --warning: #ffc107;
+    --danger: #dc3545;
+    --info: #17a2b8;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #001f54 0%, #003d82 50%, #0066cc 100%);
+    --gradient-gold: linear-gradient(135deg, #d4af37 0%, #ffd700 100%);
+    --gradient-overlay: linear-gradient(135deg, rgba(0, 31, 84, 0.95) 0%, rgba(0, 61, 130, 0.92) 100%);
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
+    --shadow-xl: 0 12px 36px rgba(0, 0, 0, 0.25);
+    
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    
+    /* Spacing */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 1.5rem;
+    --spacing-lg: 2rem;
+    --spacing-xl: 3rem;
+    
+    /* Typography */
+    --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-secondary: 'Roboto', 'Segoe UI', Tahoma, sans-serif;
+    --font-mono: 'Fira Code', 'Courier New', monospace;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -5,314 +63,1012 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 1.6;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: var(--font-primary);
+    line-height: 1.7;
+    color: var(--text-dark);
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Animated Background Pattern */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        linear-gradient(90deg, rgba(0, 61, 130, 0.03) 1px, transparent 1px),
+        linear-gradient(rgba(0, 61, 130, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    z-index: -1;
+    animation: moveGrid 20s linear infinite;
+}
+
+@keyframes moveGrid {
+    0% { background-position: 0 0; }
+    100% { background-position: 50px 50px; }
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 1280px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 var(--spacing-md);
 }
 
-/* Navbar */
+/* ============================================
+   NAVIGATION - Government Official Header
+   ============================================ */
 .navbar {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    padding: 1rem 0;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    background: var(--gradient-primary);
+    backdrop-filter: blur(20px);
+    padding: 0;
+    box-shadow: var(--shadow-lg);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 3px solid var(--accent-gold);
+}
+
+.navbar::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-gold);
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
 }
 
 .navbar .container {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
 }
 
 .logo {
-    color: white;
-    font-size: 1.5rem;
+    color: var(--white);
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.logo::before {
+    content: '🇮🇳';
+    font-size: 2rem;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
 
 .nav-links {
     display: flex;
     list-style: none;
-    gap: 2rem;
+    gap: var(--spacing-xs);
+    align-items: center;
 }
 
 .nav-links a {
-    color: white;
+    color: var(--white);
     text-decoration: none;
-    transition: opacity 0.3s;
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-md);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
+    font-size: 0.95rem;
+    letter-spacing: 0.3px;
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-links a::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--gradient-gold);
+    transition: left 0.4s ease;
+    z-index: -1;
+}
+
+.nav-links a:hover::before,
+.nav-links a.active::before {
+    left: 0;
 }
 
 .nav-links a:hover,
 .nav-links a.active {
-    opacity: 0.8;
+    color: var(--primary-navy);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
 }
 
-/* Hero Section */
+/* ============================================
+   HERO SECTION - Premium Government Banner
+   ============================================ */
 .hero {
     text-align: center;
-    padding: 4rem 0;
-    color: white;
+    padding: var(--spacing-xl) 0;
+    background: var(--gradient-overlay),
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff" fill-opacity="0.05" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+    background-size: cover;
+    color: var(--white);
+    position: relative;
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    margin-bottom: var(--spacing-xl);
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 50%, rgba(212, 175, 55, 0.1) 0%, transparent 50%);
+    pointer-events: none;
 }
 
 .hero h1 {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    margin-bottom: var(--spacing-md);
+    font-weight: 800;
+    letter-spacing: -1px;
+    text-shadow: 2px 4px 8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, #ffffff 0%, #d4af37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: fadeInUp 0.8s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .hero p {
-    font-size: 1.2rem;
-    margin-bottom: 2rem;
+    font-size: clamp(1rem, 2vw, 1.3rem);
+    margin-bottom: var(--spacing-lg);
+    opacity: 0.95;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.8;
+    text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.2);
+    animation: fadeInUp 0.8s ease-out 0.2s backwards;
 }
 
 .cta-buttons {
     display: flex;
-    gap: 1rem;
+    gap: var(--spacing-md);
     justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeInUp 0.8s ease-out 0.4s backwards;
 }
 
-/* Buttons */
+/* ============================================
+   BUTTONS - Government Standard Design
+   ============================================ */
 .btn {
-    padding: 12px 30px;
-    border: none;
-    border-radius: 5px;
+    padding: 14px 32px;
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
     cursor: pointer;
     font-size: 1rem;
-    transition: transform 0.3s, box-shadow 0.3s;
+    font-weight: 600;
+    letter-spacing: 0.5px;
     text-decoration: none;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+    font-family: var(--font-primary);
+    box-shadow: var(--shadow-md);
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+    width: 300px;
+    height: 300px;
 }
 
 .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn:active {
+    transform: translateY(-1px);
 }
 
 .btn-primary {
-    background: #4CAF50;
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--white);
+    border-color: var(--primary-blue);
+}
+
+.btn-primary:hover {
+    background: var(--primary-navy);
+    border-color: var(--accent-gold);
+    box-shadow: 0 8px 24px rgba(0, 61, 130, 0.4);
 }
 
 .btn-secondary {
-    background: #2196F3;
-    color: white;
+    background: var(--gradient-gold);
+    color: var(--primary-navy);
+    border-color: var(--accent-gold);
+    font-weight: 700;
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #ffd700 0%, #d4af37 100%);
+    box-shadow: 0 8px 24px rgba(212, 175, 55, 0.5);
 }
 
 .btn-success {
-    background: #4CAF50;
-    color: white;
+    background: linear-gradient(135deg, var(--success) 0%, #20c997 100%);
+    color: var(--white);
+}
+
+.btn-success:hover {
+    background: var(--success);
+    box-shadow: 0 8px 24px rgba(40, 167, 69, 0.4);
 }
 
 .btn-danger {
-    background: #f44336;
-    color: white;
+    background: linear-gradient(135deg, var(--danger) 0%, #c82333 100%);
+    color: var(--white);
 }
 
-/* Features */
+.btn-danger:hover {
+    background: var(--danger);
+    box-shadow: 0 8px 24px rgba(220, 53, 69, 0.4);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* ============================================
+   FEATURES SECTION - Modern Card Grid
+   ============================================ */
 .features {
-    background: white;
-    padding: 4rem 0;
+    background: var(--white);
+    padding: var(--spacing-xl) 0;
+    position: relative;
+}
+
+.features::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-gold);
 }
 
 .features h2 {
     text-align: center;
-    margin-bottom: 3rem;
-    font-size: 2.5rem;
+    margin-bottom: var(--spacing-xl);
+    font-size: clamp(2rem, 4vw, 3rem);
+    color: var(--primary-navy);
+    font-weight: 800;
+    position: relative;
+    display: inline-block;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.features h2::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 4px;
+    background: var(--gradient-gold);
+    border-radius: 2px;
 }
 
 .feature-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
 }
 
 .feature-card {
-    padding: 2rem;
+    padding: var(--spacing-lg);
     text-align: center;
-    background: #f5f5f5;
-    border-radius: 10px;
-    transition: transform 0.3s;
+    background: linear-gradient(135deg, var(--white) 0%, var(--light-gray) 100%);
+    border-radius: var(--radius-lg);
+    border: 2px solid transparent;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+    transform: scaleX(0);
+    transition: transform 0.4s ease;
+}
+
+.feature-card:hover::before {
+    transform: scaleX(1);
 }
 
 .feature-card:hover {
-    transform: translateY(-10px);
+    transform: translateY(-12px) scale(1.02);
+    border-color: var(--accent-gold);
+    box-shadow: var(--shadow-xl);
+    background: var(--white);
 }
 
 .icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: 3.5rem;
+    margin-bottom: var(--spacing-md);
+    filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.1));
+    transition: transform 0.3s ease;
 }
 
-/* Forms */
+.feature-card:hover .icon {
+    transform: scale(1.15) rotate(5deg);
+}
+
+.feature-card h3 {
+    color: var(--primary-navy);
+    font-size: 1.3rem;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 700;
+}
+
+.feature-card p {
+    color: var(--dark-gray);
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+/* ============================================
+   FORMS - Professional Government Forms
+   ============================================ */
 .form-container {
-    background: white;
-    padding: 3rem;
-    border-radius: 10px;
-    margin: 3rem auto;
-    max-width: 600px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    background: var(--white);
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-xl);
+    margin: var(--spacing-xl) auto;
+    max-width: 700px;
+    box-shadow: var(--shadow-xl);
+    border-top: 4px solid var(--accent-gold);
+    position: relative;
+}
+
+.form-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-gold);
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+.form-container h2 {
+    color: var(--primary-navy);
+    font-size: 2rem;
+    margin-bottom: var(--spacing-lg);
+    text-align: center;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .form-group {
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--spacing-md);
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--spacing-xs);
     font-weight: 600;
+    color: var(--primary-navy);
+    font-size: 0.95rem;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.form-group label::after {
+    content: ' *';
+    color: var(--danger);
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
+    padding: 12px 16px;
+    border: 2px solid var(--medium-gray);
+    border-radius: var(--radius-md);
     font-size: 1rem;
+    font-family: var(--font-primary);
+    transition: all 0.3s ease;
+    background: var(--light-gray);
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--primary-blue);
+    background: var(--white);
+    box-shadow: 0 0 0 3px rgba(0, 61, 130, 0.1);
+    transform: translateY(-2px);
 }
 
-/* Alert */
+.form-group input:hover,
+.form-group select:hover,
+.form-group textarea:hover {
+    border-color: var(--light-blue);
+}
+
+.form-group small {
+    display: block;
+    margin-top: var(--spacing-xs);
+    color: var(--dark-gray);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+/* ============================================
+   ALERTS - Government Notification System
+   ============================================ */
 .alert {
-    padding: 1rem;
-    border-radius: 5px;
-    margin-bottom: 1rem;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    box-shadow: var(--shadow-md);
+    font-weight: 500;
+    border-left: 5px solid;
+    animation: slideInRight 0.4s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.alert::before {
+    font-size: 1.5rem;
 }
 
 .alert-success {
-    background: #d4edda;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
     color: #155724;
-    border: 1px solid #c3e6cb;
+    border-left-color: var(--success);
+}
+
+.alert-success::before {
+    content: '✓';
+    color: var(--success);
 }
 
 .alert-error {
-    background: #f8d7da;
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
     color: #721c24;
-    border: 1px solid #f5c6cb;
+    border-left-color: var(--danger);
 }
 
-/* Result Box */
+.alert-error::before {
+    content: '✕';
+    color: var(--danger);
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    color: #0c5460;
+    border-left-color: #17a2b8;
+}
+
+.alert-info::before {
+    content: 'ℹ';
+    color: #17a2b8;
+}
+
+/* ============================================
+   RESULT BOX - Government Transaction Display
+   ============================================ */
 .result-box {
-    padding: 1.5rem;
-    border-radius: 8px;
-    margin-top: 1.5rem;
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    margin-top: var(--spacing-lg);
     word-wrap: break-word;
     overflow-wrap: break-word;
+    box-shadow: var(--shadow-lg);
+    border-left: 5px solid;
+    animation: slideInRight 0.5s ease;
 }
 
 .result-box.success {
-    background: #d4edda;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
     color: #155724;
-    border: 1px solid #c3e6cb;
+    border-left-color: var(--success);
 }
 
 .result-box.error {
-    background: #f8d7da;
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
     color: #721c24;
-    border: 1px solid #f5c6cb;
+    border-left-color: var(--danger);
 }
 
 .result-box strong {
     display: block;
-    margin-bottom: 0.5rem;
-    font-size: 1.1rem;
+    margin-bottom: var(--spacing-sm);
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .result-box p {
-    margin: 0.5rem 0;
-    line-height: 1.5;
+    margin: var(--spacing-sm) 0;
+    line-height: 1.6;
 }
 
 .result-box .unique-id,
 .result-box .transaction {
     font-family: 'Courier New', monospace;
     font-size: 0.9rem;
-    padding: 0.5rem;
-    background: rgba(0,0,0,0.05);
-    border-radius: 4px;
-    margin: 0.5rem 0;
+    padding: var(--spacing-sm);
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-sm) 0;
     word-break: break-all;
+    border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-/* Dashboard */
+/* ============================================
+   DASHBOARD - Professional Admin Interface
+   ============================================ */
 .dashboard-container {
-    background: white;
-    padding: 2rem;
-    border-radius: 10px;
-    margin: 2rem auto;
+    background: var(--white);
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-xl);
+    margin: var(--spacing-xl) auto;
+    max-width: 1400px;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.dashboard-container h2 {
+    color: var(--primary-navy);
+    font-size: 2rem;
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 3px solid var(--accent-gold);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .info-card {
-    background: #f5f5f5;
-    padding: 1.5rem;
-    border-radius: 8px;
-    margin: 1rem 0;
+    background: linear-gradient(135deg, var(--light-gray) 0%, var(--white) 100%);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    margin: var(--spacing-md) 0;
+    border-left: 5px solid var(--primary-blue);
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.info-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background: var(--gradient-gold);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+}
+
+.info-card:hover::before {
+    transform: scaleY(1);
+}
+
+.info-card:hover {
+    transform: translateX(8px);
+    box-shadow: var(--shadow-lg);
+}
+
+.info-card h3 {
+    color: var(--primary-navy);
+    font-size: 1.3rem;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 700;
 }
 
 .documents-list {
-    margin-top: 2rem;
+    margin-top: var(--spacing-lg);
 }
 
 .document-item {
-    background: #f9f9f9;
-    padding: 1rem;
-    border-radius: 5px;
-    margin-bottom: 1rem;
-    border-left: 4px solid #667eea;
+    background: var(--white);
+    padding: var(--spacing-md);
+    border-left: 4px solid var(--primary-blue);
+    margin-bottom: var(--spacing-md);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
 }
 
-/* QR Code Display */
+.document-item:hover {
+    transform: translateX(5px);
+    border-left-color: var(--accent-gold);
+    box-shadow: var(--shadow-md);
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: var(--shadow-sm);
+}
+
+.status-badge::before {
+    content: '●';
+    margin-right: 6px;
+    font-size: 1.2rem;
+}
+
+.status-verified {
+    background: linear-gradient(135deg, var(--success) 0%, #20c997 100%);
+    color: var(--white);
+}
+
+.status-pending {
+    background: linear-gradient(135deg, var(--warning) 0%, #ffab00 100%);
+    color: var(--primary-navy);
+}
+
+.status-rejected {
+    background: linear-gradient(135deg, var(--danger) 0%, #c82333 100%);
+    color: var(--white);
+}
+
+/* ============================================
+   QR CODE DISPLAY - Secure Document Display
+   ============================================ */
 .qr-section {
     text-align: center;
-    margin-top: 2rem;
-    padding: 2rem;
-    background: #f5f5f5;
-    border-radius: 10px;
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-xl);
+    background: linear-gradient(135deg, var(--light-gray) 0%, var(--white) 100%);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    border: 2px solid rgba(212, 175, 55, 0.3);
+}
+
+.qr-section h3 {
+    color: var(--primary-navy);
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-md);
+    font-weight: 700;
 }
 
 #qrDisplay {
-    margin: 2rem 0;
+    margin: var(--spacing-lg) 0;
 }
 
 #qrDisplay img {
     max-width: 300px;
-    border: 2px solid #667eea;
-    border-radius: 10px;
+    border: 3px solid var(--accent-gold);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm);
+    background: var(--white);
+    box-shadow: var(--shadow-md);
+    transition: transform 0.3s ease;
 }
 
-/* Footer */
+#qrDisplay img:hover {
+    transform: scale(1.05);
+}
+
+/* ============================================
+   FOOTER - Government Standard Footer
+   ============================================ */
 footer {
-    background: rgba(0,0,0,0.3);
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--white);
     text-align: center;
-    padding: 2rem 0;
-    margin-top: 4rem;
+    padding: var(--spacing-xl) 0;
+    margin-top: var(--spacing-xxl);
+    border-top: 4px solid var(--accent-gold);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+    position: relative;
 }
 
-/* Responsive */
+footer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-gold);
+}
+
+footer .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+}
+
+footer h3 {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-md);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+footer p {
+    margin-bottom: var(--spacing-sm);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+footer a {
+    color: var(--accent-gold);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+footer a::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--accent-gold);
+    transition: width 0.3s ease;
+}
+
+footer a:hover::after {
+    width: 100%;
+}
+
+footer a:hover {
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+}
+
+footer .footer-info {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN - Mobile-First Approach
+   ============================================ */
+
+/* Tablet & Small Desktop */
+@media (max-width: 1024px) {
+    :root {
+        --spacing-xs: 8px;
+        --spacing-sm: 12px;
+        --spacing-md: 16px;
+        --spacing-lg: 24px;
+        --spacing-xl: 32px;
+    }
+    
+    .container {
+        padding: 0 var(--spacing-md);
+    }
+    
+    .dashboard-container {
+        padding: var(--spacing-lg);
+    }
+    
+    .feature-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+}
+
+/* Mobile Landscape & Tablet Portrait */
 @media (max-width: 768px) {
     .hero h1 {
-        font-size: 2rem;
+        font-size: clamp(2rem, 5vw, 2.5rem);
+    }
+    
+    .hero p {
+        font-size: 1rem;
     }
     
     .nav-links {
-        gap: 1rem;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+        width: 100%;
+    }
+    
+    .nav-links a {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .navbar .container {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+    
+    .feature-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    .form-container {
+        padding: var(--spacing-lg);
+    }
+    
+    .dashboard-container {
+        padding: var(--spacing-md);
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .info-card {
+        padding: var(--spacing-md);
     }
     
     .cta-buttons {
         flex-direction: column;
+        width: 100%;
+    }
+    
+    .cta-buttons .btn {
+        width: 100%;
+    }
+}
+
+/* Mobile Portrait */
+@media (max-width: 480px) {
+    :root {
+        --spacing-xs: 6px;
+        --spacing-sm: 10px;
+        --spacing-md: 14px;
+        --spacing-lg: 20px;
+        --spacing-xl: 28px;
+    }
+    
+    .hero h1 {
+        font-size: 1.75rem;
+    }
+    
+    .hero p {
+        font-size: 0.9rem;
+    }
+    
+    .logo {
+        font-size: 1.5rem;
+    }
+    
+    .features h2,
+    .dashboard-container h2 {
+        font-size: 1.5rem;
+    }
+    
+    .form-container {
+        padding: var(--spacing-md);
+    }
+    
+    .btn {
+        padding: 12px 20px;
+        font-size: 0.9rem;
+    }
+    
+    #qrDisplay img {
+        max-width: 250px;
+    }
+    
+    .container {
+        padding: 0 var(--spacing-sm);
+    }
+}
+
+/* Print Styles - For Documents */
+@media print {
+    .navbar,
+    footer,
+    .btn {
+        display: none;
+    }
+    
+    body {
+        background: white;
+    }
+    
+    .dashboard-container,
+    .form-container {
+        box-shadow: none;
+        border: 1px solid #ccc;
     }
 }

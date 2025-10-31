@@ -7,6 +7,13 @@ if (!uniqueId) {
     window.location.href = 'register.html';
 }
 
+// Polling variables
+let pollingInterval = null;
+let lastVerificationStatus = false;
+const POLLING_INTERVAL_MS = 10000; // Check every 10 seconds
+const MAX_POLL_ATTEMPTS = 60; // Maximum 10 minutes of polling
+let pollAttempts = 0;
+
 // Display unique ID
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Dashboard loading for uniqueId:', uniqueId);
@@ -19,6 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     await loadProfile();
     setupEventListeners();
+    startStatusPolling(); // Start automatic status checking
 });
 
 async function loadProfile() {
@@ -261,4 +269,121 @@ function showError(message) {
             </button>
         </div>
     `;
+}
+
+// Start automatic status polling for verification updates
+function startStatusPolling() {
+    console.log('Starting automatic status polling (every 10 seconds)...');
+    
+    // Only start polling if status is pending
+    if (!lastVerificationStatus) {
+        pollingInterval = setInterval(checkVerificationStatus, POLLING_INTERVAL_MS);
+    }
+}
+
+// Stop polling
+function stopStatusPolling() {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+        console.log('Stopped status polling');
+    }
+}
+
+// Check for verification status updates
+async function checkVerificationStatus() {
+    // Stop if max attempts reached
+    if (pollAttempts >= MAX_POLL_ATTEMPTS) {
+        stopStatusPolling();
+        console.log('Max polling attempts reached. Stopped polling.');
+        return;
+    }
+    
+    pollAttempts++;
+    console.log(`Polling attempt ${pollAttempts}/${MAX_POLL_ATTEMPTS}: Checking verification status...`);
+    
+    try {
+        const response = await fetch(`/api/tourist/info/${uniqueId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const newStatus = result.data.isVerified;
+            
+            // Check if status changed from pending to verified
+            if (newStatus && !lastVerificationStatus) {
+                console.log('✅ Verification status changed! Tourist is now verified.');
+                lastVerificationStatus = newStatus;
+                
+                // Stop polling
+                stopStatusPolling();
+                
+                // Show notification
+                showVerificationNotification();
+                
+                // Reload profile and documents
+                await loadProfile();
+                await loadDocuments();
+                
+                // Load QR code if verified
+                await loadQRCode();
+            }
+        }
+    } catch (error) {
+        console.error('Error checking verification status:', error);
+    }
+}
+
+// Show verification notification
+function showVerificationNotification() {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+        z-index: 10000;
+        font-size: 16px;
+        font-weight: bold;
+        animation: slideInRight 0.5s ease-out;
+    `;
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 24px;">✅</span>
+            <div>
+                <div>Verification Complete!</div>
+                <div style="font-size: 14px; font-weight: normal; margin-top: 5px;">
+                    Your tourist registration has been verified by the authority.
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Add slide animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Remove notification after 5 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideInRight 0.5s ease-out reverse';
+        setTimeout(() => notification.remove(), 500);
+    }, 5000);
 }

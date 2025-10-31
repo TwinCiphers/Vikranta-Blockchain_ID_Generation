@@ -1,21 +1,21 @@
 version: '3.8'
 
 services:
-  # Truffle Blockchain (Ganache)
+  # Truffle Blockchain (Ganache) - SECURITY HARDENED
   blockchain:
     image: trufflesuite/ganache:latest
     container_name: tourist-blockchain
     ports:
-      - "9545:8545"
+      - "127.0.0.1:9545:8545"  # Bind to localhost only - NOT exposed to internet
     environment:
-      - MNEMONIC=diesel someone meadow ice fee oppose copper mountain distance law insane duty
+      - MNEMONIC=${BLOCKCHAIN_MNEMONIC}  # From .env - NOT hardcoded
     command: 
       - --database.dbPath=/app/db
       - --chain.networkId=5777
       - --chain.chainId=5777
       - --miner.blockGasLimit=6721975
       - --miner.defaultGasPrice=20000000000
-      - --wallet.mnemonic="diesel someone meadow ice fee oppose copper mountain distance law insane duty"
+      - --wallet.mnemonic=${BLOCKCHAIN_MNEMONIC}
       - --wallet.totalAccounts=10
       - --wallet.defaultBalance=100
       - --server.host=0.0.0.0
@@ -25,34 +25,58 @@ services:
     networks:
       - blockchain-network
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true  # Prevent privilege escalation
+    cap_drop:
+      - ALL  # Drop all capabilities
+    cap_add:
+      - NET_BIND_SERVICE  # Only allow network binding
+    read_only: true  # Read-only root filesystem
+    tmpfs:
+      - /tmp  # Temporary writable directory
 
-  # Backend API Server
+  # Backend API Server - SECURITY HARDENED
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
     container_name: tourist-backend
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"  # Bind to localhost only - NOT exposed to internet
     environment:
       - NODE_ENV=production
       - BLOCKCHAIN_PROVIDER=http://blockchain:8545
-      - CONTRACT_ADDRESS=0x8a483dA03C78a48382261D67385A80e7c5aC7CA5
-      - ENCRYPTION_KEY=4482d1e262fb2c871da06ca46da38545d75016d0b91b362b449f5e59c538b145
+      - CONTRACT_ADDRESS=${CONTRACT_ADDRESS}  # From .env
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}  # From .env - NOT hardcoded
+      - JWT_SECRET=${JWT_SECRET}  # From .env - NOT hardcoded
       - PORT=3000
-      - BASE_URL=http://localhost:3000
-      - APP_URL=http://localhost:3000
+      - BASE_URL=${BASE_URL:-http://localhost:3000}
+      - APP_URL=${APP_URL:-http://localhost:3000}
     volumes:
-      - ./backend:/app/backend
-      - ./build:/app/build
-      - ./frontend:/app/frontend
-      - ./node_modules:/app/node_modules
+      - ./backend:/app/backend:ro  # Read-only mount
+      - ./build:/app/build:ro  # Read-only mount
+      - ./frontend:/app/frontend:ro  # Read-only mount
+      - ./node_modules:/app/node_modules:ro  # Read-only mount
+      - ./logs:/app/logs  # Writable for security logs
     depends_on:
       - blockchain
     networks:
       - blockchain-network
     command: sh -c "sleep 10 && node backend/server.js"
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true  # Prevent privilege escalation
+    cap_drop:
+      - ALL  # Drop all capabilities
+    cap_add:
+      - NET_BIND_SERVICE  # Only allow network binding
+    user: "node"  # Run as non-root user
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/tourist/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Contract Deployment Service (runs once)
   deployer:
@@ -72,6 +96,23 @@ services:
       - blockchain
     networks:
       - blockchain-network
+
+  # Nginx Reverse Proxy with SSL/HTTPS
+  nginx:
+    image: nginx:alpine
+    container_name: tourist-nginx
+    ports:
+      - "443:443"  # HTTPS
+      - "80:80"    # HTTP (redirects to HTTPS)
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    networks:
+      - blockchain-network
+    restart: unless-stopped
 
 networks:
   blockchain-network:

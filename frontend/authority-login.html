@@ -120,9 +120,6 @@
         let web3;
         let account;
 
-        // Authority passcode (in production, this should be handled server-side)
-        const AUTHORITY_PASSCODE = 'ADMIN2025';
-
         // Wait for Web3 to load
         window.addEventListener('load', () => {
             console.log('Window loaded');
@@ -187,10 +184,10 @@
                 return;
             }
 
-            const passcode = document.getElementById('passcode').value.trim();
+            const passphrase = document.getElementById('passcode').value.trim();
 
-            if (!passcode) {
-                showAlert('Please enter the authority passcode', 'error');
+            if (!passphrase) {
+                showAlert('Please enter the authority passphrase', 'error');
                 return;
             }
 
@@ -199,32 +196,26 @@
             verifyBtn.textContent = 'Verifying...';
 
             try {
-                // Verify passcode
-                if (passcode !== AUTHORITY_PASSCODE) {
-                    showAlert('Invalid passcode. Access denied.', 'error');
-                    verifyBtn.disabled = false;
-                    verifyBtn.textContent = '✅ Verify & Login';
-                    return;
-                }
+                showAlert('Verifying authority credentials...', 'success');
 
-                showAlert('Verifying authority status on blockchain...', 'success');
-
-                // Check if wallet is registered as authority on blockchain
-                const response = await fetch('/api/authority/check-authority', {
+                // Login with the backend to get JWT token (passphrase verified server-side)
+                const response = await fetch('/api/authority/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        address: account
+                        address: account,
+                        passphrase: passphrase
                     })
                 });
 
                 const result = await response.json();
-                console.log('Authority check result:', result);
+                console.log('Authority login result:', result);
 
                 if (result.success && result.isAuthority) {
-                    // Store authentication in session
+                    // Store JWT token and authentication in session
+                    sessionStorage.setItem('authorityToken', result.token);
                     sessionStorage.setItem('authorityWallet', account);
                     sessionStorage.setItem('authorityAuth', 'true');
                     sessionStorage.setItem('authTime', Date.now());
@@ -236,7 +227,7 @@
                     }, 1500);
 
                 } else {
-                    showAlert('❌ Access Denied: Your wallet is not registered as an authority. Please contact the administrator.', 'error');
+                    showAlert('❌ Access Denied: ' + (result.message || 'Your wallet is not registered as an authority. Please contact the administrator.'), 'error');
                     verifyBtn.disabled = false;
                     verifyBtn.textContent = '✅ Verify & Login';
                 }

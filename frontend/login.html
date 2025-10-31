@@ -26,7 +26,7 @@
                             type="text" 
                             id="uniqueId" 
                             name="uniqueId" 
-                            placeholder="e.g., 550e8400-e29b-41d4-a716-446655440000"
+                            placeholder="e.g., 7 to 10 alphanumeric characters (A-Za-z0-9)"
                             required
                             style="font-size: 16px; padding: 12px;"
                         >
@@ -45,7 +45,7 @@
                 <div class="help-section">
                     <p>Don't have an account? <a href="register.html">Register here</a></p>
                     <p class="help-text">💡 Lost your Unique ID? Contact support for recovery.</p>
-                    <p class="help-text">📧 Email: support@touristregistry.com</p>
+                    <p class="help-text"><a href="mailto:tech.pheonix03@gmail.com">📧 Email: support@VikrantaTouristry.com</a></p>
                 </div>
             </div>
 
@@ -81,10 +81,10 @@
                 return;
             }
             
-            // Validate unique ID format (UUID format)
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            if (!uuidRegex.test(uniqueId)) {
-                statusElement.textContent = '⚠️ Invalid Unique ID format. Please check and try again.';
+            // Validate unique ID format (7-10 alphanumeric characters)
+            const idRegex = /^[A-Za-z0-9]{7,10}$/;
+            if (!idRegex.test(uniqueId)) {
+                statusElement.textContent = '⚠️ Invalid Unique ID format. Use 7-10 alphanumeric characters.';
                 statusElement.style.color = '#ef4444';
                 return;
             }

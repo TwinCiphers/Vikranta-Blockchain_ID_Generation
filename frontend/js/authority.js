@@ -36,7 +36,26 @@ async function loadPendingVerifications() {
     try {
         console.log('Loading pending verifications...');
         
-        const response = await fetch('/api/authority/pending');
+        const token = sessionStorage.getItem('authorityToken');
+        if (!token) {
+            alert('Session expired. Please login again.');
+            window.location.href = 'authority-login.html';
+            return;
+        }
+        
+        const response = await fetch('/api/authority/pending', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.status === 401 || response.status === 403) {
+            alert('Session expired. Please login again.');
+            sessionStorage.clear();
+            window.location.href = 'authority-login.html';
+            return;
+        }
+        
         const result = await response.json();
         
         console.log('Pending verifications:', result);
@@ -113,9 +132,10 @@ function displayTouristDetails(tourist, documents) {
     
     detailsDiv.innerHTML = `
         <div class="tourist-info">
-            <h3>Tourist Information</h3>
+            <h3>👤 Tourist Information</h3>
             <p><strong>Name:</strong> ${tourist.name}</p>
             <p><strong>Nationality:</strong> ${tourist.nationality}</p>
+            <p><strong>Unique ID:</strong> <code>${currentTouristId}</code></p>
             <p><strong>Registration Date:</strong> ${new Date(tourist.registrationDate * 1000).toLocaleDateString()}</p>
             <p><strong>Status:</strong> ${tourist.isVerified ? '✅ Verified' : '⏳ Pending'}</p>
         </div>
@@ -123,21 +143,43 @@ function displayTouristDetails(tourist, documents) {
     
     documentsDiv.innerHTML = `
         <div class="documents-info">
-            <h3>Uploaded Documents (${documents.length})</h3>
-            ${documents.map((doc, index) => `
-                <div class="document-item">
-                    <p><strong>Type:</strong> ${doc.documentType}</p>
-                    <p><strong>IPFS Hash:</strong> ${doc.ipfsHash}</p>
-                    <p><strong>Upload Date:</strong> ${new Date(doc.uploadDate * 1000).toLocaleDateString()}</p>
-                    <p><strong>Status:</strong> ${doc.isVerified ? '✅ Verified' : '⏳ Pending'}</p>
-                </div>
-            `).join('')}
+            <h3>📄 Uploaded Documents (${documents.length})</h3>
+            ${documents.length === 0 ? 
+                '<p style="color: #999; padding: 20px; text-align: center; background: #f9f9f9; border-radius: 8px;">No documents uploaded yet</p>' :
+                documents.map((doc, index) => `
+                    <div class="document-item" style="margin-bottom: 15px; padding: 15px; border: 2px solid ${doc.isVerified ? '#28a745' : '#ffc107'}; border-radius: 8px; background: ${doc.isVerified ? '#f0fff4' : '#fffbf0'};">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <p style="margin: 5px 0;"><strong>📋 Type:</strong> <span style="background: #e3f2fd; padding: 4px 12px; border-radius: 4px; font-weight: 500;">${doc.documentType}</span></p>
+                                <p style="margin: 5px 0; font-size: 12px;"><strong>🔗 IPFS Hash:</strong> <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; word-break: break-all;">${doc.ipfsHash}</code></p>
+                                <p style="margin: 5px 0;"><strong>📅 Upload Date:</strong> ${new Date(doc.uploadDate * 1000).toLocaleDateString()} ${new Date(doc.uploadDate * 1000).toLocaleTimeString()}</p>
+                                <p style="margin: 5px 0;"><strong>Status:</strong> ${doc.isVerified ? '<span style="color: #28a745; font-weight: bold;">✅ Verified</span>' : '<span style="color: #ffc107; font-weight: bold;">⏳ Pending Review</span>'}</p>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin-left: 15px;">
+                                <button onclick="viewDocument('${doc.ipfsHash}')" class="btn btn-primary" style="font-size: 12px; padding: 8px 12px; white-space: nowrap;">
+                                    👁️ View
+                                </button>
+                                <a href="https://ipfs.io/ipfs/${doc.ipfsHash}" target="_blank" class="btn btn-secondary" style="font-size: 12px; padding: 8px 12px; text-decoration: none; text-align: center; white-space: nowrap;">
+                                    🔗 Open IPFS
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')
+            }
         </div>
     `;
 }
 
 async function approveTourist() {
     if (!currentTouristId) return;
+    
+    const token = sessionStorage.getItem('authorityToken');
+    if (!token) {
+        alert('Session expired. Please login again.');
+        window.location.href = 'authority-login.html';
+        return;
+    }
     
     const approveBtn = document.getElementById('approveBtn');
     const validityType = document.querySelector('input[name="validityType"]:checked');
@@ -200,7 +242,8 @@ async function approveTourist() {
         const response = await fetch('/api/authority/verify', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
                 uniqueId: currentTouristId,
@@ -208,6 +251,13 @@ async function approveTourist() {
                 validityDays: validityDays
             })
         });
+        
+        if (response.status === 401 || response.status === 403) {
+            alert('Session expired. Please login again.');
+            sessionStorage.clear();
+            window.location.href = 'authority-login.html';
+            return;
+        }
         
         const result = await response.json();
         console.log('Verification result:', result);
@@ -237,34 +287,62 @@ async function approveTourist() {
 async function rejectTourist() {
     if (!currentTouristId) return;
     
-    if (!confirm('Are you sure you want to reject this tourist registration?')) {
+    const rejectionReason = prompt('Please enter the reason for rejection:', 'Documents incomplete or invalid');
+    
+    if (!rejectionReason) {
+        return; // User cancelled
+    }
+    
+    const token = sessionStorage.getItem('authorityToken');
+    if (!token) {
+        alert('Session expired. Please login again.');
+        window.location.href = 'authority-login.html';
         return;
     }
     
+    const rejectBtn = document.getElementById('rejectBtn');
+    rejectBtn.disabled = true;
+    rejectBtn.textContent = 'Processing...';
+    
     try {
-        console.log('Rejecting tourist:', currentTouristId);
+        console.log('Rejecting tourist:', currentTouristId, 'Reason:', rejectionReason);
         
         const response = await fetch('/api/authority/verify', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
                 uniqueId: currentTouristId,
-                approved: false
+                approved: false,
+                rejectionReason: rejectionReason
             })
         });
         
+        if (response.status === 401 || response.status === 403) {
+            alert('Session expired. Please login again.');
+            sessionStorage.clear();
+            window.location.href = 'authority-login.html';
+            return;
+        }
+        
         const result = await response.json();
+        console.log('Rejection result:', result);
         
         if (result.success) {
-            alert('Tourist registration rejected');
+            alert(`❌ Tourist registration rejected\n\nReason: ${rejectionReason}\n\nThe tourist has been removed from the pending list.`);
             closeModal();
             loadPendingVerifications();
+        } else {
+            alert('❌ Rejection failed: ' + (result.message || 'Unknown error'));
         }
     } catch (error) {
         console.error('Rejection error:', error);
-        alert('Error rejecting tourist');
+        alert('❌ Error: ' + error.message);
+    } finally {
+        rejectBtn.disabled = false;
+        rejectBtn.textContent = 'Reject';
     }
 }
 
@@ -280,6 +358,13 @@ function closeModal() {
 async function downloadPVCCard() {
     if (!currentTouristId) return;
     
+    const token = sessionStorage.getItem('authorityToken');
+    if (!token) {
+        alert('Session expired. Please login again.');
+        window.location.href = 'authority-login.html';
+        return;
+    }
+    
     const downloadBtn = document.getElementById('downloadPvcBtn');
     downloadBtn.disabled = true;
     downloadBtn.textContent = 'Generating...';
@@ -290,12 +375,20 @@ async function downloadPVCCard() {
         const response = await fetch('/api/authority/generate-pvc-card', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
                 uniqueId: currentTouristId
             })
         });
+        
+        if (response.status === 401 || response.status === 403) {
+            alert('Session expired. Please login again.');
+            sessionStorage.clear();
+            window.location.href = 'authority-login.html';
+            return;
+        }
         
         if (!response.ok) {
             throw new Error('Failed to generate PVC card');
@@ -334,5 +427,162 @@ function showMessage(message) {
     pendingList.innerHTML = `<p>${message}</p>`;
 }
 
-// Make viewTourist available globally
+// View document in modal/new tab
+function viewDocument(ipfsHash) {
+    console.log('Viewing document:', ipfsHash);
+    console.log('Hash length:', ipfsHash.length);
+    
+    // Check if this is a mock IPFS hash (contains invalid characters)
+    const isMockHash = /[/+=]/.test(ipfsHash);
+    const isTruncated = ipfsHash.length < 46 && ipfsHash.length > 0;
+    
+    if (isMockHash) {
+        alert('⚠️ Mock IPFS Hash Detected\n\n' +
+              'This document was uploaded using mock IPFS storage for development.\n' +
+              'The file exists in the blockchain but not on the real IPFS network.\n\n' +
+              'To view real documents:\n' +
+              '1. Configure real IPFS in backend/config/ipfs.js\n' +
+              '2. Sign up for free IPFS service:\n' +
+              '   • Infura: https://infura.io\n' +
+              '   • Pinata: https://pinata.cloud\n' +
+              '   • Web3.Storage: https://web3.storage\n\n' +
+              'Hash: ' + ipfsHash + ' (length: ' + ipfsHash.length + ')');
+        return;
+    }
+    
+    if (isTruncated) {
+        alert('⚠️ Truncated IPFS Hash Detected\n\n' +
+              'The IPFS hash appears to be incomplete.\n' +
+              'Valid IPFS hashes (CIDv0) are 46 characters long.\n\n' +
+              'Current hash: ' + ipfsHash + '\n' +
+              'Current length: ' + ipfsHash.length + ' characters\n' +
+              'Expected length: 46 characters\n\n' +
+              'This may be due to:\n' +
+              '• Database field length limit\n' +
+              '• UI display truncation\n' +
+              '• Storage error during upload\n\n' +
+              'Please check the blockchain data or re-upload the document.');
+        return;
+    }
+    
+    // Create modal for document viewing
+    const existingModal = document.getElementById('documentViewModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'documentViewModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 10000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    `;
+    
+    const ipfsGateways = [
+        `https://ipfs.io/ipfs/${ipfsHash}`,
+        `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
+        `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`
+    ];
+    
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 12px; max-width: 90vw; max-height: 90vh; overflow: auto; position: relative;">
+            <div style="padding: 20px; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px 12px 0 0;">
+                <div>
+                    <h3 style="margin: 0; color: white;">📄 Document Viewer</h3>
+                    <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">IPFS Hash: ${ipfsHash}</p>
+                </div>
+                <button onclick="document.getElementById('documentViewModal').remove()" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                    ✕
+                </button>
+            </div>
+            <div style="padding: 20px;">
+                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2196f3;">
+                    <h4 style="margin: 0 0 10px 0; color: #1976d2;">📌 How to View Document</h4>
+                    <p style="margin: 5px 0; color: #555; font-size: 14px;">IPFS documents may take time to load or require opening in a new tab. Choose an option below:</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    ${ipfsGateways.map((url, index) => `
+                        <a href="${url}" target="_blank" class="btn btn-primary" style="
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 8px;
+                            padding: 12px 20px;
+                            text-decoration: none;
+                            font-size: 14px;
+                            border-radius: 8px;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            transition: all 0.3s;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.1)'">
+                            🌐 Gateway ${index + 1}
+                        </a>
+                    `).join('')}
+                </div>
+
+                <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #333;">🔗 Direct IPFS Links:</h4>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        ${ipfsGateways.map((url, index) => `
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="color: #666; font-size: 12px; width: 60px;">Gateway ${index + 1}:</span>
+                                <input readonly value="${url}" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace;" onclick="this.select()" />
+                                <button onclick="navigator.clipboard.writeText('${url}'); this.textContent='✓'; setTimeout(() => this.textContent='📋', 2000)" style="padding: 8px 12px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">📋</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div style="background: #fff9e6; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;">
+                    <h4 style="margin: 0 0 10px 0; color: #f57c00;">💡 Viewing Tips</h4>
+                    <ul style="margin: 5px 0; padding-left: 20px; color: #666; font-size: 13px;">
+                        <li>Click any "Gateway" button above to open the document in a new tab</li>
+                        <li>If one gateway doesn't work, try another one</li>
+                        <li>IPFS content is decentralized and may take a moment to load</li>
+                        <li>Some browsers may block IPFS iframes - use the gateway links instead</li>
+                        <li>Copy the link and paste in a new browser window if needed</li>
+                    </ul>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px; padding: 20px; background: #fafafa; border-radius: 8px;">
+                    <p style="color: #999; font-size: 12px; margin: 0;">
+                        📦 Stored on IPFS (InterPlanetary File System) - Decentralized & Permanent Storage
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+    
+    // Close on ESC key
+    const escHandler = (e) => {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+}
+
+// Make functions available globally
 window.viewTourist = viewTourist;
+window.viewDocument = viewDocument;

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const { touristRegistryContract, web3 } = require('../config/blockchain');
 const { uploadToIPFS } = require('../config/ipfs');
 const { encrypt } = require('../utils/encryption');
@@ -27,8 +27,20 @@ router.post('/register', async (req, res) => {
             });
         }
 
+        // Generate short alphanumeric unique ID (configurable length via env SHORT_ID_LENGTH)
+        const ID_LENGTH = parseInt(process.env.SHORT_ID_LENGTH, 10) || 10; // default to 10
+        const generateShortId = (len = ID_LENGTH) => {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            const bytes = crypto.randomBytes(len);
+            let id = '';
+            for (let i = 0; i < len; i++) {
+                id += chars[bytes[i] % chars.length];
+            }
+            return id;
+        };
+
         // Generate unique ID
-        const uniqueId = uuidv4();
+        const uniqueId = generateShortId();
 
         // Encrypt sensitive data
         const encryptedData = encrypt(JSON.stringify({

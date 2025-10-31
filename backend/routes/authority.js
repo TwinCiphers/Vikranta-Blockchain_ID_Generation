@@ -4,6 +4,9 @@ const { touristRegistryContract, web3 } = require('../config/blockchain');
 const { generateQRCode } = require('../utils/qrGenerator');
 const { generatePVCCard } = require('../utils/pvcCardGenerator');
 const expirationChecker = require('../services/expirationChecker');
+const { generateToken, authenticateJWT, requireRole } = require('../middleware/auth');
+const { trackFailedAttempt, resetAttempts, getRemainingAttempts, checkBan } = require('../middleware/bruteForceProtection');
+const logger = require('../middleware/securityLogger');
 
 // Simple in-memory storage for registered tourists (in production, use a database)
 let registeredTourists = [];
@@ -16,8 +19,115 @@ router.trackTourist = (touristData) => {
     }
 };
 
-// POST /api/authority/check-authority - Check if address is an authority
-router.post('/check-authority', async (req, res) => {
+// POST /api/authority/login - Authority login with JWT token generation
+router.post('/login', checkBan, async (req, res) => {
+    try {
+        const { address, passphrase } = req.body;
+        const clientIP = req.ip || req.connection.remoteAddress;
+        
+        const AUTHORITY_PASSPHRASE = 'vikrantaTBS$2025';
+        
+        if (!address) {
+            return res.status(400).json({
+                success: false,
+                message: 'Wallet address is required'
+            });
+        }
+        
+        if (!passphrase) {
+            return res.status(400).json({
+                success: false,
+                message: 'Passphrase is required'
+            });
+        }
+        
+        console.log('Authority login attempt:', address);
+        logger.authSuccess(address, clientIP, { action: 'login_attempt' });
+        
+        // Check passphrase first
+        if (passphrase !== AUTHORITY_PASSPHRASE) {
+            // Track failed attempt
+            const banned = trackFailedAttempt(clientIP);
+            const remaining = getRemainingAttempts(clientIP);
+            
+            logger.authFailure('invalid_passphrase', clientIP, {
+                address,
+                remainingAttempts: remaining,
+                banned
+            });
+            
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid passphrase. Access denied.',
+                remainingAttempts: remaining,
+                banned
+            });
+        }
+        
+        // Check on blockchain if address is an authority
+        const isAuthority = await touristRegistryContract.methods
+            .authorities(address)
+            .call();
+        
+        console.log('Is authority:', isAuthority);
+        
+        if (!isAuthority) {
+            // Track failed attempt
+            const banned = trackFailedAttempt(clientIP);
+            const remaining = getRemainingAttempts(clientIP);
+            
+            logger.authFailure('not_authority', clientIP, {
+                address,
+                remainingAttempts: remaining,
+                banned
+            });
+            
+            return res.status(401).json({
+                success: false,
+                message: 'Not authorized. Only registered authorities can access this panel.',
+                remainingAttempts: remaining,
+                banned
+            });
+        }
+        
+        // Generate JWT token
+        const token = generateToken(address, 'authority', '24h');
+        
+        // Reset failed attempts on successful login
+        resetAttempts(clientIP);
+        
+        logger.authSuccess(address, clientIP, {
+            action: 'login_success',
+            tokenGenerated: true
+        });
+        
+        res.json({
+            success: true,
+            isAuthority: true,
+            message: 'Authority verified and logged in',
+            token,
+            expiresIn: '24h',
+            user: {
+                address,
+                role: 'authority'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Authority login error:', error);
+        logger.authFailure('login_error', req.ip, {
+            error: error.message
+        });
+        
+        res.status(500).json({
+            success: false,
+            message: 'Login failed: ' + error.message
+        });
+    }
+});
+
+// POST /api/authority/check-authority - Check if address is an authority (PROTECTED)
+router.post('/check-authority', authenticateJWT, requireRole('authority'), async (req, res) => {
     try {
         const { address } = req.body;
         
@@ -29,6 +139,7 @@ router.post('/check-authority', async (req, res) => {
         }
         
         console.log('Checking authority status for:', address);
+        logger.dataAccess(req.user.userId, 'authority', 'check_authority', { address });
         
         // Check on blockchain if address is an authority
         const isAuthority = await touristRegistryContract.methods
@@ -37,39 +148,11 @@ router.post('/check-authority', async (req, res) => {
         
         console.log('Is authority:', isAuthority);
         
-        // If not an authority, try to add them (for demo purposes)
-        // In production, only admin should be able to add authorities
-        if (!isAuthority) {
-            try {
-                const accounts = await web3.eth.getAccounts();
-                console.log('Attempting to add as authority using admin account:', accounts[0]);
-                
-                await touristRegistryContract.methods
-                    .addAuthority(address)
-                    .send({ from: accounts[0], gas: 3000000 });
-                
-                console.log('Successfully added as authority');
-                
-                res.json({
-                    success: true,
-                    isAuthority: true,
-                    message: 'Authority access granted'
-                });
-            } catch (addError) {
-                console.error('Failed to add authority:', addError);
-                res.json({
-                    success: false,
-                    isAuthority: false,
-                    message: 'Not authorized and could not be added as authority'
-                });
-            }
-        } else {
-            res.json({
-                success: true,
-                isAuthority: true,
-                message: 'Authority verified'
-            });
-        }
+        res.json({
+            success: true,
+            isAuthority,
+            message: isAuthority ? 'Authority verified' : 'Not an authority'
+        });
         
     } catch (error) {
         console.error('Check authority error:', error);
@@ -80,10 +163,11 @@ router.post('/check-authority', async (req, res) => {
     }
 });
 
-// GET /api/authority/pending - Get pending verifications
-router.get('/pending', async (req, res) => {
+// GET /api/authority/pending - Get pending verifications (PROTECTED)
+router.get('/pending', authenticateJWT, requireRole('authority'), async (req, res) => {
     try {
         console.log('Fetching pending verifications...');
+        logger.dataAccess(req.user.userId, 'authority', 'get_pending', {});
         
         // Get total tourists from contract
         const totalTourists = await touristRegistryContract.methods.totalTourists().call();
@@ -98,7 +182,8 @@ router.get('/pending', async (req, res) => {
                     .getTouristInfo(tourist.uniqueId)
                     .call();
                 
-                if (!info[4]) { // isVerified is false
+                // Check if not verified AND still active (not rejected)
+                if (!info[4] && info[8]) { // isVerified is false AND isActive is true
                     const docs = await touristRegistryContract.methods
                         .getTouristDocuments(tourist.uniqueId)
                         .call();
@@ -130,18 +215,55 @@ router.get('/pending', async (req, res) => {
 });
 
 // POST /api/authority/verify - Verify tourist
-router.post('/verify', async (req, res) => {
+router.post('/verify', authenticateJWT, requireRole('authority'), async (req, res) => {
     try {
-        const { uniqueId, approved, validityDays = 365 } = req.body;
+        const { uniqueId, approved, validityDays = 365, rejectionReason = 'Not specified' } = req.body;
         
         console.log('Verifying tourist:', uniqueId, 'Approved:', approved, 'Validity:', validityDays, 'days');
+        logger.dataModification(req.user.userId, 'tourist', 'verify', { uniqueId, approved, validityDays });
 
         if (!approved) {
-            // For rejection, just update local status (you can add rejection logic to contract if needed)
-            return res.json({
-                success: true,
-                message: 'Tourist registration rejected'
-            });
+            // Handle rejection - mark as inactive on blockchain
+            const accounts = await web3.eth.getAccounts();
+            
+            try {
+                // Call rejectTourist on blockchain to set isActive = false
+                const tx = await touristRegistryContract.methods
+                    .rejectTourist(uniqueId)
+                    .send({ from: accounts[0], gas: 3000000 });
+                
+                console.log('Tourist rejected on blockchain:', tx.transactionHash);
+                
+                // Also remove from in-memory array
+                const index = registeredTourists.findIndex(t => t.uniqueId === uniqueId);
+                if (index !== -1) {
+                    registeredTourists.splice(index, 1);
+                    console.log('Tourist removed from registered list:', uniqueId);
+                }
+                
+                // Track rejection with timestamp
+                const rejectionData = {
+                    uniqueId,
+                    rejectionReason,
+                    rejectedBy: req.user.userId,
+                    rejectionDate: new Date().toISOString(),
+                    transactionHash: tx.transactionHash
+                };
+                
+                console.log('Tourist registration rejected:', rejectionData);
+                
+                return res.json({
+                    success: true,
+                    message: 'Tourist registration rejected and marked as inactive on blockchain',
+                    rejection: rejectionData
+                });
+            } catch (error) {
+                console.error('Error rejecting tourist on blockchain:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to reject tourist: ' + error.message
+                });
+            }
         }
 
         // Validate validity days
@@ -211,11 +333,12 @@ router.post('/verify', async (req, res) => {
 });
 
 // POST /api/authority/generate-pvc-card - Generate PVC card
-router.post('/generate-pvc-card', async (req, res) => {
+router.post('/generate-pvc-card', authenticateJWT, requireRole('authority'), async (req, res) => {
     try {
         const { uniqueId } = req.body;
         
         console.log('Generating PVC card for:', uniqueId);
+        logger.dataAccess(req.user.userId, 'tourist', 'generate_pvc', { uniqueId });
 
         // Fetch tourist data from blockchain
         const touristInfo = await touristRegistryContract.methods
@@ -251,8 +374,9 @@ router.post('/generate-pvc-card', async (req, res) => {
 });
 
 // GET /api/authority/all-tourists - Get all registered tourists
-router.get('/all-tourists', async (req, res) => {
+router.get('/all-tourists', authenticateJWT, requireRole('authority'), async (req, res) => {
     try {
+        logger.dataAccess(req.user.userId, 'tourist', 'get_all', {});
         const tourists = await touristRegistryContract.methods
             .getAllTourists()
             .call();
@@ -267,12 +391,13 @@ router.get('/all-tourists', async (req, res) => {
     }
 });
 
-// GET /api/authority/check/:uniqueId - Check a specific tourist by ID
-router.get('/check/:uniqueId', async (req, res) => {
+// GET /api/authority/check/:uniqueId - Check a specific tourist by ID (PROTECTED)
+router.get('/check/:uniqueId', authenticateJWT, requireRole('authority'), async (req, res) => {
     try {
         const { uniqueId } = req.params;
         
         console.log('Checking tourist:', uniqueId);
+        logger.dataAccess(req.user.userId, 'tourist', 'check_by_id', { uniqueId });
         
         const info = await touristRegistryContract.methods
             .getTouristInfo(uniqueId)
