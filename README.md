@@ -9,6 +9,11 @@ A complete blockchain-based decentralized tourist registration system with uniqu
 
 ---
 
+## Author
+
+Author name : DEEPAK P S <br>
+Mail id : deepakkrishnark@gmail.com 
+
 ## 📑 Table of Contents
 
 1. [Features](#-features)
